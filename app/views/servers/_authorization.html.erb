@@ -8,6 +8,14 @@
       <input type='hidden' name='aud' id='aud' class="used" value='<%= @server.url %>' />
       <input type='hidden' name='state' id='state' class="used" value='<%= @server.generate_state %>' />
       <div class="form-group">
+        
+        <label for="oauth_type">Authorization Type</label>		
+        <select id="oauth_type" class="form-control authorize_form_element">		
+            <option value="authorization_code" <%= @server.oauth_type == 'authorization_code' ? 'selected="selected"' : '' %> >Authorization Code</option>
+            <option value="client_credentials" <%= @server.oauth_type == 'client_credentials' ? 'selected="selected"' : '' %> >Client Credentials</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label for="client_id">Client ID</label>
         <input type="text" id="client_id" name="client_id" class="form-control authorize_form_element used" value="<%= @server.client_id %>" />
       </div>
@@ -22,6 +30,10 @@
       <div class="form-group">
         <label for="launch_param">Launch Parameter (Optional. Only used if  the "launch" scope below is selected.)</label>
         <input type="text" id="launch_param" name="launch" class="form-control authorize_form_element" value="<%= @server.launch_param %>" />
+      </div>
+      <div class="form-group">
+        <label for="endpoint_params">Endpoint Parameters (Optional. Format them as URL components)</label>
+        <input type="text" id="endpoint_params" name="endpoint_params" class="form-control authorize_form_element" value="<%= @server.endpoint_params %>" />
       </div>
       <div class="panel panel-default">
         <div class="panel-heading">

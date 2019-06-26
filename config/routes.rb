@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     get 'supported_tests', defaults: { format: :json }
     post 'oauth_params'
     post 'delete_authorization'
+    post 'oauth_authorize_backend'
   end
 
   controller :scorecards do

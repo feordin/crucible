@@ -48,17 +48,27 @@ class TestRun
 
     client1.default_format = self.server.default_format if self.server.default_format
     if self.server.oauth_token_opts
-      client1.client = self.server.get_oauth2_client
-      if client1.client.nil?
-        self.status = 'unauthorized'
-        self.save
+      if self.server.oauth_type == "client_credentials"        
+        token = server.oauth_token_opts["access_token"]
+        if token
+          Delayed::Worker.logger.info "Found client_credentials and token setting on client"
+          client1.set_bearer_token(token)
+        else
+          return false
+        end
+      else
+        client1.client = self.server.get_oauth2_client
+        if client1.client.nil?
+          self.status = 'unauthorized'
+          self.save
 
-        return false
+          return false
+        end
+        # If the token had to get refreshed, the server oauth details are probably out of sync here
+        # So we'll reload the server to keep it in sync, since we save it later in this function
+        self.server.reload
+        client1.use_oauth2_auth = true
       end
-      # If the token had to get refreshed, the server oauth details are probably out of sync here
-      # So we'll reload the server to keep it in sync, since we save it later in this function
-      self.server.reload
-      client1.use_oauth2_auth = true
     end
     # client2 = FHIR::Client.new(result.test_run.destination_server.url) if result.test_run.is_multiserver
     # TODO: figure out multi server

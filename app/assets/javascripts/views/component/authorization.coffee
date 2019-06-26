@@ -34,8 +34,19 @@ class Crucible.Authorization
     )
     $("#authorize_form").on('submit', (event) =>
       event.preventDefault()
-      $.post("/servers/#{$('#conformance-data').data('server-id')}/oauth_params",
+      oauth_type = $('#oauth_type').find('option:selected').val()
+      submit_uri = "/servers/#{$('#conformance-data').data('server-id')}/"
+
+      if oauth_type == "authorization_code"
+        submit_uri = submit_uri + "oauth_params"
+      else if oauth_type == "client_credentials"
+        submit_uri = submit_uri + "oauth_authorize_backend"
+      else 
+        throw ("Invalid Oauth Type")
+ 
+      $.post(submit_uri,
       {
+          oauth_type: $('#oauth_type').find('option:selected').val(),
           client_id: $('#client_id').val(),
           client_secret: $('#client_secret').val(),
           authorize_url: $('#conformance-data').children().data('authorize-url'),
@@ -43,6 +54,7 @@ class Crucible.Authorization
           state: $('#state').val(),
           launch_param: $('#launch_param').val(),
           patient_id: $('#patient_id').val(),
+          endpoint_params: $('#endpoint_params').val(),
           scopes: $(event.target).find("[name='scope_vars[]']:checked").map(() ->
                     $(this).val()
                   ).get().join(",")
@@ -55,7 +67,16 @@ class Crucible.Authorization
           $(this).val()
         ).get().join(" ")
         $("#scope").val(scope)
-        window.location.assign(event.target.action + "?" + $("input.used").serialize())
+
+        endpoint_params = $('#endpoint_params').val()
+        if oauth_type == "authorization_code"
+          endpoint_params = "&" + endpoint_params
+
+        if oauth_type == "authorization_code"
+          window.location.assign(event.target.action + "?" + $("input.used").serialize() + endpoint_params)
+        else if oauth_type == "client_credentials"
+          window.location.reload()
+
       )
       return false
     )

@@ -20,3 +20,5 @@ fhir_client_verbose.log*
 **/.DS_Store
 coverage
 coverage-js
+
+/public/assets/*

@@ -12,6 +12,8 @@ class Server
   field :percent_passing, type: Float
   field :conformance, type: String
   field :state, type: String
+  field :oauth_type, type: String
+  field :endpoint_params, type: String
   field :client_id, type: String
   field :client_secret, type: String
   field :launch_param, type: String

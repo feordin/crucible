@@ -180,6 +180,8 @@ class ServersController < ApplicationController
       server.token_url = params[:token_url]
       server.launch_param = params[:launch_param] ? params[:launch_param].strip : ''
       server.patient_id = params[:patient_id] ? params[:patient_id].strip : ''
+      server.oauth_type = params[:oauth_type]
+      server.endpoint_params = params[:endpoint_params] ? params[:endpoint_params].strip : ''
       if params[:scopes]
         scopes = params[:scopes].split(",")
         server.scopes.find_all { |scope| scopes.index(scope.name) }. each do |scope|
@@ -188,6 +190,75 @@ class ServersController < ApplicationController
       end
       server.save
       render json: { success: true }
+    end
+  end
+  
+    
+  def oauth_authorize_backend
+    server = Server.find(params[:server_id])
+
+    if !server
+      render status: 500, text: 'Invalid server id'
+    else
+      server.client_id = params[:client_id].strip
+      server.client_secret = params[:client_secret].strip unless server.client_secret && params[:client_secret] === '*' * server.client_secret.length
+      server.state = params[:state]
+      server.authorize_url = params[:authorize_url]
+      server.token_url = params[:token_url]
+      server.launch_param = params[:launch_param] ? params[:launch_param].strip : ''
+      server.patient_id = params[:patient_id] ? params[:patient_id].strip : ''
+      server.oauth_type = params[:oauth_type]
+      server.endpoint_params = params[:endpoint_params] ? params[:endpoint_params].strip : ''
+      if params[:scopes]
+        scopes = params[:scopes].split(",")
+        server.scopes.find_all { |scope| scopes.index(scope.name) }. each do |scope|
+          scope.update_attribute(:selected, true)
+        end
+      end
+
+      options = {
+        authorize_url: server.authorize_url,
+        token_url: server.token_url,
+        raise_errors: false
+      }
+      client = OAuth2::Client.new(server.client_id, server.client_secret, options)
+      if (!server.client_secret.empty?)
+        auth_pw = Base64.strict_encode64("#{server.client_id}:#{server.client_secret}")
+        token_params = {
+          client_id: server.client_id,
+          client_secret: server.client_secret,
+          grant_type: "client_credentials",
+        }
+        if params[:endpoint_params]
+            endpoint_params = params[:endpoint_params].split("&")
+            endpoint_params.each do |parameter|
+                current_param = parameter.split("=")
+                if current_param.length == 2
+                    token_params[current_param[0]] = current_param[1]
+                end
+            end
+        end
+        
+        response = client.request(:post, server.token_url, {:body => token_params, :headers => {'Authorization' => "Basic #{auth_pw}"}})
+        token = OAuth2::AccessToken.from_hash(client, JSON.parse(response.body))
+      else
+        flash.alert = "Authorization error: client secret is missing"
+        redirect_to server_path(server)
+      end
+      if token.params["error"]
+        flash.alert = "#{token.params['error']}: #{token.params['error_description']}"
+        redirect_to server_path(server)
+        return
+      end
+
+      if !token.params["patient"] && server.patient_id
+        token.params["patient"] = server.patient_id
+      end
+
+      server.oauth_token_opts = token.to_hash
+      server.save!
+      flash.notice = "Server successfully authorized"      
+      redirect_to server_path(server)
     end
   end
 
@@ -204,7 +275,9 @@ class ServersController < ApplicationController
         :token_url,
         :patient_id,
         :scopes,
-        :launch_param
+        :launch_param,
+        :oauth_type,
+        :endpoint_params
       )
       server.save
       flash.notice = "Server authorization credentials deleted"
